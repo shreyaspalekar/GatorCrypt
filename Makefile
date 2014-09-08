@@ -4,15 +4,15 @@ LDFLAGS = -I.
 COMMON_SOURCES = 
 ENCRYPT_SOURCES = gatorcrypt.c
 DECRYPT_SOURCES = gatordec.c
-COMMON_OBJECTS = $(COMMON_SOURCES:.cpp=.o)
-ENCRYPT_OBJECTS = $(ENCRYPT_SOURCES:.cpp=.o)
-DECRYPT_OBJECTS = $(DECRYPT_SOURCES:.cpp=.o)
+COMMON_OBJECTS = $(COMMON_SOURCES:.c=.o)
+ENCRYPT_OBJECTS = $(ENCRYPT_SOURCES:.c=.o)
+DECRYPT_OBJECTS = $(DECRYPT_SOURCES:.c=.o)
 ENCRYPT = gatorcrypt 
 DECRYPT = gatordec
 
-.PHONY: all encrypt decrypt
+.PHONY: all encrypt decrypt clean
 
-all: encrypt decrypt
+all: encrypt decrypt clean
 
 encrypt: $(ENCRYPT)
 
@@ -24,6 +24,8 @@ $(ENCRYPT): $(COMMON_OBJECTS) $(ENCRYPT_OBJECTS)
 $(DECRYPT): $(COMMON_OBJECTS) $(DECRYPT_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@
 
-.cpp.o:
+.c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
+clean:
+	rm -rf *.o
