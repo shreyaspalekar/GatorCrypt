@@ -9,9 +9,12 @@ int main(int argc, char *argv[]){
 	arguments* args = parse_args(argc,argv);
 	char password[MAX_PASS_LEN];
 	char key[MAX_KEY_LEN];
-	char in_buffer[BUFFER_SIZE];
-	char out_buffer[BUFFER_SIZE];
 	gcry_cipher_hd_t handle;
+	FILE * inp_file;
+	FILE * out_file;
+	size_t file_size;
+	size_t buffer_size = BUFFER_SIZE;
+	gcry_error_t err = 0;
 	#ifdef DEBUG
 
 	printf("filename %s\n",args->fileName);
@@ -31,30 +34,92 @@ int main(int argc, char *argv[]){
 
 	printf("Password: %s\n",password);
 	
+	#ifdef DEBUG
 	print_key(key);
+	#endif
+	//TODO:Close files
+	inp_file = fopen(args->fileName,"r");
+	out_file = fopen("out","w");
+
+	fseek (inp_file, 0, SEEK_END);
+	file_size=ftell(inp_file);
+	fseek(inp_file, 0L, SEEK_SET);
 
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , 0 );
-	gcry_cipher_setkey(handle , key , strlen(key));
-	gcry_cipher_setiv(handle , "5844" ,strlen("5844"));
+	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+	
+	size_t bytes_read = 0;
+	
+	printf("\ndecrypted\n");
 
-	strcpy(in_buffer,"wolololololololo");
-	int encrypted_bytes = (strlen(in_buffer)+1) *sizeof(char);
-	printf("Bytes to encrypt: %d\n",encrypted_bytes);
+	while(bytes_read<file_size){
+	
+		char in_buffer[BUFFER_SIZE];
+		char out_buffer[BUFFER_SIZE];
+		char p_buffer[BUFFER_SIZE];
+		size_t incr = fread(in_buffer,sizeof(char),BUFFER_SIZE,inp_file);
+		size_t encrypted_bytes = incr;
+		//printf("String: %s\n",in_buffer);
+		printf("-------------------------------------------------------\n");
+		print_buffer(in_buffer,encrypted_bytes);
+		printf("read %d bytes size of buffer %d\n",encrypted_bytes,sizeof(in_buffer));
+		bytes_read+=incr;
 
-	gcry_cipher_encrypt(handle, out_buffer , BUFFER_SIZE , in_buffer , encrypted_bytes);
+	//	err = gcry_cipher_encrypt(handle, in_buffer , encrypted_bytes , NULL , 0);
+	//	if(!err==GPG_ERR_NO_ERROR){
+	//		fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
+	//		exit(-1);
+	//	}
+	//	write_buffer_to_file(out_file,in_buffer, encrypted_bytes);
+	//	#ifdef DEBUG
+	//	
+	//	if(!gcry_cipher_decrypt(handle , in_buffer , encrypted_bytes , NULL , 0)==GPG_ERR_NO_ERROR){
+	//		printf("Decryption Error!!");
+	//		exit(-1);
+	//	}
+	//	print_buffer(in_buffer,encrypted_bytes);
+	//	#endif
+		
 
-	printf("\nencrypted %s\n",out_buffer);
+		err = gcry_cipher_encrypt(handle, out_buffer , buffer_size , in_buffer , encrypted_bytes);
+		if(!err==GPG_ERR_NO_ERROR){
+			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
+			exit(-1);
+		}
+		#ifdef DEBUG
+		gcry_cipher_decrypt(handle , p_buffer , buffer_size , out_buffer , encrypted_bytes);
+		print_buffer(p_buffer,encrypted_bytes);
+		#endif
+		write_buffer_to_file(out_file,out_buffer, encrypted_bytes);
+	}
 
-	gcry_cipher_decrypt (handle , in_buffer , BUFFER_SIZE , out_buffer , encrypted_bytes );
-
-	printf("\ndecrypted %s\n",in_buffer);
-
+	fclose(inp_file);
+	fclose(out_file);
 	gcry_cipher_close(handle);
 
 	exit(0);
 }
 
+void print_buffer(char *p, int len)
+{
+    //printf("Printing Buffer\n");
+    int i;
+    for (i = 0; i < len; ++i)
+        printf("%c", p[i]);
+    printf("\n");
+}
 
+void write_buffer_to_file(FILE *f,char *p, size_t len)
+{
+	write(fileno(f),p,len);
+//	printf("wrote %d bytes to file",len);	
+    //int i;
+    //for (i = 0; i < len; ++i){
+     //   fprintf(f,"%c", p[i]);	
+    //    printf("%c", p[i]);
+    //}
+}
 
 void print_key(char *key){
 	unsigned char * ptr = key;
@@ -68,8 +133,8 @@ void print_key(char *key){
 }
 void generate_key(char *password,char *key){
 
-	gcry_kdf_derive( password, strlen(password), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
-					strlen("NaCl"), 4096 , 64 , key );
+	gcry_kdf_derive( password, strlen(password)*sizeof(char), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
+					strlen("NaCl")*sizeof(char), 4096 , MAX_KEY_LEN, key );
 }
 
 arguments *parse_args(int argc,char *argv[]){
@@ -101,7 +166,7 @@ arguments *parse_args(int argc,char *argv[]){
 	}
 
 	return args;
-};
+}
 
 void check_args(int argc,char *argv[]){
 

@@ -5,6 +5,8 @@
 #include <string.h>
 #include <gcrypt.h>
 
+void write_buffer_to_file(FILE*,char*,size_t);
+void print_buffer(char *p, int len);
 void print_key(char *);
 void generate_key(char *,char *);
 arguments *parse_args(int argc,char *argv[]);
