@@ -45,7 +45,7 @@ int main(int argc, char *argv[]){
 	file_size=ftell(inp_file);
 	fseek(inp_file, 0L, SEEK_SET);
 
-	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , 0 );
+	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
 	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
 	
