@@ -1,11 +1,17 @@
 #include<gatorcrypt.h>
 #define DEBUG
+#define BUFFER_SIZE 128
+#define MAX_PASS_LEN 10
+#define MAX_KEY_LEN 64
 
 int main(int argc, char *argv[]){
 	
 	arguments* args = parse_args(argc,argv);
-	char password[10];
-	char *key;
+	char password[MAX_PASS_LEN];
+	char key[MAX_KEY_LEN];
+	char in_buffer[BUFFER_SIZE];
+	char out_buffer[BUFFER_SIZE];
+	gcry_cipher_hd_t handle;
 	#ifdef DEBUG
 
 	printf("filename %s\n",args->fileName);
@@ -21,10 +27,36 @@ int main(int argc, char *argv[]){
 	printf("Enter password: ");
 	scanf("%s",password);
 
-	key = generate_key(password);
+	generate_key(password,key);
 
 	printf("Password: %s\n",password);
 	
+	print_key(key);
+
+	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , 0 );
+	gcry_cipher_setkey(handle , key , strlen(key));
+	gcry_cipher_setiv(handle , "5844" ,strlen("5844"));
+
+	strcpy(in_buffer,"wolololololololo");
+	int encrypted_bytes = (strlen(in_buffer)+1) *sizeof(char);
+	printf("Bytes to encrypt: %d\n",encrypted_bytes);
+
+	gcry_cipher_encrypt(handle, out_buffer , BUFFER_SIZE , in_buffer , encrypted_bytes);
+
+	printf("\nencrypted %s\n",out_buffer);
+
+	gcry_cipher_decrypt (handle , in_buffer , BUFFER_SIZE , out_buffer , encrypted_bytes );
+
+	printf("\ndecrypted %s\n",in_buffer);
+
+	gcry_cipher_close(handle);
+
+	exit(0);
+}
+
+
+
+void print_key(char *key){
 	unsigned char * ptr = key;
 	int i =0;
 	printf("Key: ");
@@ -33,17 +65,11 @@ int main(int argc, char *argv[]){
 		ptr++;
 		i++;
 	}
-
-	exit(0);
 }
+void generate_key(char *password,char *key){
 
-char *generate_key(char *password){
-
-	char key[64];
 	gcry_kdf_derive( password, strlen(password), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
 					strlen("NaCl"), 4096 , 64 , key );
-
-	return key;
 }
 
 arguments *parse_args(int argc,char *argv[]){

@@ -5,7 +5,8 @@
 #include <string.h>
 #include <gcrypt.h>
 
-char * generate_key(char *);
+void print_key(char *);
+void generate_key(char *,char *);
 arguments *parse_args(int argc,char *argv[]);
 void check_args(int argc,char *argv[]);
 char * readPass();
