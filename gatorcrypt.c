@@ -24,8 +24,16 @@ int main(int argc, char *argv[]){
 	key = generate_key(password);
 
 	printf("Password: %s\n",password);
-	printf("Key: %s\n",key);
 	
+	unsigned char * ptr = key;
+	int i =0;
+	printf("Key: ");
+	while(i<strlen(key)){
+		printf("%X ",*ptr);
+		ptr++;
+		i++;
+	}
+
 	exit(0);
 }
 
