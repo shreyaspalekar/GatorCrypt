@@ -30,8 +30,12 @@ int main(int argc, char *argv[]){
 }
 
 char *generate_key(char *password){
-	gpg_error_t gcry_kdf_derive ( password, strlen(password), GCRY_KDF_PBKDF2 , SHA_512, "NaCl", 
-					size_t saltlen, 4096 , 64 , void *keybuffer );
+
+	char key[64];
+	gcry_kdf_derive( password, strlen(password), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
+					strlen("NaCl"), 4096 , 64 , key );
+
+	return key;
 }
 
 arguments *parse_args(int argc,char *argv[]){

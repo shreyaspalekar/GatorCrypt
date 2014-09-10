@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <utils.h>
 #include <string.h>
-#include <libgcrypt.h>
+#include <gcrypt.h>
 
 char * generate_key(char *);
 arguments *parse_args(int argc,char *argv[]);
