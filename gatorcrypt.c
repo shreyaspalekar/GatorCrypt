@@ -9,14 +9,16 @@ int main(int argc, char *argv[]){
 	arguments* args = parse_args(argc,argv);
 	char password[MAX_PASS_LEN];
 	char key[MAX_KEY_LEN];
+	char *hmac;
 	gcry_cipher_hd_t handle;
+	gcry_md_hd_t h;
 	FILE * inp_file;
 	FILE * out_file;
 	size_t file_size;
 	size_t buffer_size = BUFFER_SIZE;
 	gcry_error_t err = 0;
-	#ifdef DEBUG
 
+	#ifdef DEBUG
 	printf("filename %s\n",args->fileName);
 	if(args->isLocal==true){	
 		printf("isLocal true\n");
@@ -47,6 +49,9 @@ int main(int argc, char *argv[]){
 
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+
+	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
+	gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
 	
 	size_t bytes_read = 0;
 
@@ -67,6 +72,9 @@ int main(int argc, char *argv[]){
 			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
 			exit(-1);
 		}
+		
+		gcry_md_write(h , out_buffer, encrypted_bytes);
+
 		write_buffer_to_file(out_file,out_buffer, encrypted_bytes);
 		#ifdef DEBUG
 		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
@@ -75,9 +83,16 @@ int main(int argc, char *argv[]){
 		#endif
 	}
 
+	gcry_md_final(h);
+	hmac = gcry_md_read(h , GCRY_MD_SHA512 );
+	
+	printf("hmac: ");
+	print_buffer(hmac,64);
+
 	fclose(inp_file);
 	fclose(out_file);
 	gcry_cipher_close(handle);
+	gcry_md_close(h);
 
 	exit(0);
 }
