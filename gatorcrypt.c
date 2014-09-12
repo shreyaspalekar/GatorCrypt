@@ -47,11 +47,8 @@ int main(int argc, char *argv[]){
 
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
-	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
 	
 	size_t bytes_read = 0;
-	
-	printf("\ndecrypted\n");
 
 	while(bytes_read<file_size){
 	
@@ -60,38 +57,22 @@ int main(int argc, char *argv[]){
 		char p_buffer[BUFFER_SIZE];
 		size_t incr = fread(in_buffer,sizeof(char),BUFFER_SIZE,inp_file);
 		size_t encrypted_bytes = incr;
-		//printf("String: %s\n",in_buffer);
-		printf("-------------------------------------------------------\n");
-		print_buffer(in_buffer,encrypted_bytes);
-		printf("read %d bytes size of buffer %d\n",encrypted_bytes,sizeof(in_buffer));
+//		printf("\n--------------Bytes to encrypt: %d-------------\n",encrypted_bytes);
+//		print_buffer(in_buffer,encrypted_bytes);
 		bytes_read+=incr;
 
-	//	err = gcry_cipher_encrypt(handle, in_buffer , encrypted_bytes , NULL , 0);
-	//	if(!err==GPG_ERR_NO_ERROR){
-	//		fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
-	//		exit(-1);
-	//	}
-	//	write_buffer_to_file(out_file,in_buffer, encrypted_bytes);
-	//	#ifdef DEBUG
-	//	
-	//	if(!gcry_cipher_decrypt(handle , in_buffer , encrypted_bytes , NULL , 0)==GPG_ERR_NO_ERROR){
-	//		printf("Decryption Error!!");
-	//		exit(-1);
-	//	}
-	//	print_buffer(in_buffer,encrypted_bytes);
-	//	#endif
-		
-
+		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
 		err = gcry_cipher_encrypt(handle, out_buffer , buffer_size , in_buffer , encrypted_bytes);
 		if(!err==GPG_ERR_NO_ERROR){
 			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
 			exit(-1);
 		}
+		write_buffer_to_file(out_file,out_buffer, encrypted_bytes);
 		#ifdef DEBUG
+		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
 		gcry_cipher_decrypt(handle , p_buffer , buffer_size , out_buffer , encrypted_bytes);
 		print_buffer(p_buffer,encrypted_bytes);
 		#endif
-		write_buffer_to_file(out_file,out_buffer, encrypted_bytes);
 	}
 
 	fclose(inp_file);
@@ -104,21 +85,23 @@ int main(int argc, char *argv[]){
 void print_buffer(char *p, int len)
 {
     //printf("Printing Buffer\n");
-    int i;
-    for (i = 0; i < len; ++i)
-        printf("%c", p[i]);
-    printf("\n");
+    	int i;
+//	printf("\n--------------------------------------------------------\n");
+    	for (i = 0; i < len; ++i)
+        	printf("%c", p[i]);
+ //   	printf("\n");
+//	printf("\n--------------------------------------------------------\n");
 }
 
 void write_buffer_to_file(FILE *f,char *p, size_t len)
 {
 	write(fileno(f),p,len);
 //	printf("wrote %d bytes to file",len);	
-    //int i;
-    //for (i = 0; i < len; ++i){
-     //   fprintf(f,"%c", p[i]);	
-    //    printf("%c", p[i]);
-    //}
+    	//int i;
+    	//for (i = 0; i < len; ++i){
+       // 	fprintf(f,"%c", p[i]);	
+       // 	printf("%c", p[i]);
+//	}
 }
 
 void print_key(char *key){
@@ -130,6 +113,7 @@ void print_key(char *key){
 		ptr++;
 		i++;
 	}
+	printf("\n");
 }
 void generate_key(char *password,char *key){
 

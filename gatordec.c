@@ -1,5 +1,5 @@
 #include<gatorcrypt.h>
-#define DEBUG
+//#define DEBUG
 #define BUFFER_SIZE 128
 #define MAX_PASS_LEN 10
 #define MAX_KEY_LEN 64
@@ -9,11 +9,12 @@ int main(int argc, char *argv[]){
 	arguments* args = parse_args(argc,argv);
 	char password[MAX_PASS_LEN];
 	char key[MAX_KEY_LEN];
-	char in_buffer[BUFFER_SIZE];
-	char out_buffer[BUFFER_SIZE];
+	char input_buffer[BUFFER_SIZE];
+	char output_buffer[BUFFER_SIZE];
 	gcry_cipher_hd_t handle;
 	FILE * inp_file;
 	size_t file_size;
+	gcry_error_t err = 0;
 	#ifdef DEBUG
 
 	printf("filename %s\n",args->fileName);
@@ -43,27 +44,26 @@ int main(int argc, char *argv[]){
 
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
-	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
 	
 	size_t bytes_read = 0;
-	
-	printf("\ndecrypted\n");
-
 	while(bytes_read<file_size){
 		
-		size_t incr = fread(in_buffer,sizeof(char),BUFFER_SIZE,inp_file);
-		//size_t encrypted_bytes = (strlen(in_buffer)+1) *sizeof(char);
+		size_t incr = fread(input_buffer,sizeof(char),BUFFER_SIZE,inp_file);
+		//size_t encrypted_bytes = (strlen(input_buffer)+1) *sizeof(char);
 		size_t encrypted_bytes = incr;
 //		printf("%d bytes read, file size %d bytes\n",incr,file_size);
 		bytes_read+=incr;
 
-//		gcry_cipher_encrypt(handle, out_buffer , BUFFER_SIZE , in_buffer , encrypted_bytes);
-//		write_buffer_to_file(out_file,out_buffer, BUFFER_SIZE);
-		#ifdef DEBUG
-		gcry_cipher_decrypt (handle , out_buffer , BUFFER_SIZE , in_buffer , encrypted_bytes );
-//		printf("Bytes to decrypt: %d\n",encrypted_bytes);
-		print_buffer(out_buffer,encrypted_bytes);
-		#endif
+//		gcry_cipher_encrypt(handle, output_buffer , BUFFER_SIZE , input_buffer , encrypted_bytes);
+		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+		err = gcry_cipher_decrypt (handle , output_buffer , BUFFER_SIZE , input_buffer , encrypted_bytes );
+
+		if(!err==GPG_ERR_NO_ERROR){
+                        fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
+                        exit(-1);
+                }
+	//	printf("\n--------------Bytes to decrypt: %d-------------\n",encrypted_bytes);
+		print_buffer(output_buffer,encrypted_bytes);
 	}
 
         fclose(inp_file);
@@ -74,9 +74,11 @@ int main(int argc, char *argv[]){
 
 void print_buffer(char *p, int len)
 {
-    int i;
-    for (i = 0; i < len; ++i)
-        printf("%c", p[i]);
+    	int i;
+	//printf("\n-----------------------------------------------------\n");
+    	for (i = 0; i < len; ++i)
+        	printf("%c", p[i]);
+	//printf("\n-----------------------------------------------------\n");
 }
 
 void write_buffer_to_file(FILE *f,char *p, size_t len)
