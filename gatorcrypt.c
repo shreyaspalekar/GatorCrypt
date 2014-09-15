@@ -181,6 +181,7 @@ void check_args(int argc,char *argv[]){
 void transmit(arguments *args,char *buffer,size_t length){
 	
 	int sock;
+	int echoServPort=88;
 	struct sockaddr_in echoServAddr;	
 	
 	if((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -188,7 +189,7 @@ void transmit(arguments *args,char *buffer,size_t length){
 
 	echoServAddr.sin_family = AF_INET;/* Internet address family */
 	echoServAddr.sin_addr.s_addr=htonl(INADDR_ANY); /* Server IP address */
-	echoServAddr.sin_port =htons(args->port); /* Server port */
+	echoServAddr.sin_port =htons(echoServPort); /* Server port */
 	
 	if (connect(sock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
 		DieWithError("connect() failed");

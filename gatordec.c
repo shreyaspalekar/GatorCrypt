@@ -1,5 +1,6 @@
 #include<gatorcrypt.h>
 //#define DEBUG
+#define MAXPENDING 10
 #define BUFFER_SIZE 128
 #define MAX_PASS_LEN 10
 #define MAX_KEY_LEN 64
@@ -30,7 +31,99 @@ int main(int argc, char *argv[]){
 	}
 	exit(0);
 }
-void listen_and_decrypt(arguments *args){}
+void listen_and_decrypt(arguments *args){
+	int servSock;
+	int echoServPort = 88;//args->port;
+	struct sockaddr_in echoServAddr;
+	struct sockaddr_in echoClntAddr;
+
+	if ((servSock= socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+		DieWithError("socket() failed");
+
+	echoServAddr.sin_family = AF_INET;/* Internet address family */
+	echoServAddr.sin_addr.s_addr =htonl(INADDR_ANY);/* Any incoming interface */
+	echoServAddr.sin_port =htons(echoServPort); /* Local port */
+
+	if (bind(servSock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
+	{
+		DieWithError("bind() failed");
+		exit(0);
+	}
+
+	if (listen(servSock, MAXPENDING) < 0)
+		DieWithError("listen() failed");
+
+//	for (;;) /* Run forever */
+//	{
+		
+		int clntLen=sizeof(echoClntAddr);
+		int clntSock;
+		int recvMsgSize;
+		char password[MAX_PASS_LEN];
+		char key[MAX_KEY_LEN];
+		char file_buffer[MAX_FILE_SIZE];
+		char hmac[HMAC_SIZE];
+		char *calculated_hmac;
+		char output_buffer[MAX_FILE_SIZE];
+		size_t file_size;
+		size_t hmac_size=HMAC_SIZE;	
+		gcry_cipher_hd_t handle;
+		gcry_md_hd_t h;
+		gcry_error_t err = 0;
+	
+
+		if ((clntSock=accept(servSock,(struct sockaddr*)&echoClntAddr,&clntLen)) < 0)
+			DieWithError("accept() failed");
+
+		/* Receive message from client */
+		if ((recvMsgSize=recv(clntSock,file_buffer,MAX_FILE_SIZE, 0)) < 0)
+			DieWithError("recv() failed");
+		
+		printf("Enter password: ");
+		scanf("%s",password);
+		printf("Password: %s\n",password);
+
+		generate_key(password,key);
+
+		gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
+		gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+		gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
+	        gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
+
+		memcpy(hmac,&file_buffer[recvMsgSize-hmac_size],sizeof(char)*HMAC_SIZE);
+	
+		gcry_md_write(h , file_buffer, recvMsgSize-hmac_size);
+	        gcry_md_final(h);
+	        calculated_hmac = gcry_md_read(h , GCRY_MD_SHA512 );	
+		
+		if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
+			printf("HMAC ERROR CODE 66");
+			exit(66);
+		}	
+
+		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+		err = gcry_cipher_decrypt (handle , output_buffer , MAX_FILE_SIZE , file_buffer , recvMsgSize-hmac_size );
+
+		if(!err==GPG_ERR_NO_ERROR){
+			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
+			exit(-1);
+		}
+		print_buffer(output_buffer,recvMsgSize-hmac_size);
+	
+		gcry_cipher_close(handle);
+		gcry_md_close(h);
+        
+		close(clntSock); 
+		
+//	}
+
+}
+
+void DieWithError(char *errorMessage)
+{
+	perror(errorMessage);
+	exit(1);
+}
 
 void decrypt_file(FILE *inp_file){
 	char password[MAX_PASS_LEN];
