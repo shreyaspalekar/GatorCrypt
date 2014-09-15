@@ -3,20 +3,14 @@
 #define BUFFER_SIZE 128
 #define MAX_PASS_LEN 10
 #define MAX_KEY_LEN 64
+#define HMAC_SIZE 64
+#define MAX_FILE_SIZE 10000
 
 int main(int argc, char *argv[]){
 	
 	arguments* args = parse_args(argc,argv);
-	char password[MAX_PASS_LEN];
-	char key[MAX_KEY_LEN];
-	char input_buffer[BUFFER_SIZE];
-	char output_buffer[BUFFER_SIZE];
-	gcry_cipher_hd_t handle;
 	FILE * inp_file;
-	size_t file_size;
-	gcry_error_t err = 0;
 	#ifdef DEBUG
-
 	printf("filename %s\n",args->fileName);
 	if(args->isLocal==true){	
 		printf("isLocal true\n");
@@ -26,60 +20,95 @@ int main(int argc, char *argv[]){
 	}
 	#endif
 
+	
+	if(args->isLocal==true){
+		inp_file = fopen(args->fileName,"r");
+		decrypt_file(inp_file);	
+	}
+	else{
+		listen_and_decrypt(args);
+	}
+	exit(0);
+}
+void listen_and_decrypt(arguments *args){}
+
+void decrypt_file(FILE *inp_file){
+	char password[MAX_PASS_LEN];
+	char key[MAX_KEY_LEN];
+	char file_buffer[MAX_FILE_SIZE];
+	char hmac[HMAC_SIZE];
+	char *calculated_hmac;
+	char output_buffer[MAX_FILE_SIZE];
+	size_t file_size;
+	size_t hmac_size=HMAC_SIZE;	
+	gcry_cipher_hd_t handle;
+	gcry_md_hd_t h;
+	gcry_error_t err = 0;
+
 	printf("Enter password: ");
 	scanf("%s",password);
+	printf("Password: %s\n",password);
 
 	generate_key(password,key);
 
-	printf("Password: %s\n",password);
-	
-	#ifdef DEBUG
-	print_key(key);
-	#endif
-	inp_file = fopen(args->fileName,"r");
+	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
+	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
+        gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
 
-	fseek (inp_file, 0, SEEK_END);
+	fseek (inp_file, 0L, SEEK_END);
 	file_size=ftell(inp_file);
 	fseek(inp_file, 0L, SEEK_SET);
 
-	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
-	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+	fseek (inp_file, -64L, SEEK_END);
+	fread(hmac,sizeof(char),hmac_size,inp_file);	
+	fseek(inp_file, 0L, SEEK_SET);
 	
-	size_t bytes_read = 0;
-	while(bytes_read<file_size){
-		
-		size_t incr = fread(input_buffer,sizeof(char),BUFFER_SIZE,inp_file);
-		//size_t encrypted_bytes = (strlen(input_buffer)+1) *sizeof(char);
-		size_t encrypted_bytes = incr;
-//		printf("%d bytes read, file size %d bytes\n",incr,file_size);
-		bytes_read+=incr;
+     
+	size_t read_bytes = fread(file_buffer,sizeof(char),file_size-hmac_size,inp_file);
 
-//		gcry_cipher_encrypt(handle, output_buffer , BUFFER_SIZE , input_buffer , encrypted_bytes);
-		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
-		err = gcry_cipher_decrypt (handle , output_buffer , BUFFER_SIZE , input_buffer , encrypted_bytes );
-
-		if(!err==GPG_ERR_NO_ERROR){
-                        fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
-                        exit(-1);
-                }
-	//	printf("\n--------------Bytes to decrypt: %d-------------\n",encrypted_bytes);
-		print_buffer(output_buffer,encrypted_bytes);
+	gcry_md_write(h , file_buffer, file_size-hmac_size);
+        gcry_md_final(h);
+        calculated_hmac = gcry_md_read(h , GCRY_MD_SHA512 );
+	
+	if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
+		printf("HMAC ERROR CODE 66");
+		exit(66);
 	}
 
-        fclose(inp_file);
+
+	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+	err = gcry_cipher_decrypt (handle , output_buffer , MAX_FILE_SIZE , file_buffer , file_size-hmac_size );
+
+	if(!err==GPG_ERR_NO_ERROR){
+		fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
+		exit(-1);
+	}
+	print_buffer(output_buffer,file_size-hmac_size);
+
 	gcry_cipher_close(handle);
+	gcry_md_close(h);
+        
+	fclose(inp_file);
 
-	exit(0);
 }
-
 void print_buffer(char *p, int len)
 {
     	int i;
-	//printf("\n-----------------------------------------------------\n");
     	for (i = 0; i < len; ++i)
         	printf("%c", p[i]);
-	//printf("\n-----------------------------------------------------\n");
 }
+
+void print_buffer_d(char *p, int len)
+{
+   
+        int i;
+        for (i = 0; i < len; ++i)
+                printf(" %c %d %d", p[i],p[i],i);
+        printf("i=%d\n",i);
+	
+}
+
 
 void write_buffer_to_file(FILE *f,char *p, size_t len)
 {

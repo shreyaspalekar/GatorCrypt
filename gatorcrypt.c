@@ -1,9 +1,10 @@
 #include<gatorcrypt.h>
 #define DEBUG
 #define BUFFER_SIZE 128
+#define HMAC_SIZE 64
 #define MAX_PASS_LEN 10
 #define MAX_KEY_LEN 64
-
+#define MAX_FILE_SIZE 10000
 int main(int argc, char *argv[]){
 	
 	arguments* args = parse_args(argc,argv);
@@ -53,41 +54,30 @@ int main(int argc, char *argv[]){
 	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
 	gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
 	
-	size_t bytes_read = 0;
+	char in_buffer[MAX_FILE_SIZE];
+	char out_buffer[MAX_FILE_SIZE+HMAC_SIZE];
+	size_t encrypted_bytes = fread(in_buffer,sizeof(char),MAX_FILE_SIZE,inp_file);
 
-	while(bytes_read<file_size){
-	
-		char in_buffer[BUFFER_SIZE];
-		char out_buffer[BUFFER_SIZE];
-		char p_buffer[BUFFER_SIZE];
-		size_t incr = fread(in_buffer,sizeof(char),BUFFER_SIZE,inp_file);
-		size_t encrypted_bytes = incr;
-//		printf("\n--------------Bytes to encrypt: %d-------------\n",encrypted_bytes);
-//		print_buffer(in_buffer,encrypted_bytes);
-		bytes_read+=incr;
-
-		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
-		err = gcry_cipher_encrypt(handle, out_buffer , buffer_size , in_buffer , encrypted_bytes);
-		if(!err==GPG_ERR_NO_ERROR){
-			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
-			exit(-1);
-		}
-		
-		gcry_md_write(h , out_buffer, encrypted_bytes);
-
-		write_buffer_to_file(out_file,out_buffer, encrypted_bytes);
-		#ifdef DEBUG
-		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
-		gcry_cipher_decrypt(handle , p_buffer , buffer_size , out_buffer , encrypted_bytes);
-		print_buffer(p_buffer,encrypted_bytes);
-		#endif
+	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+	err = gcry_cipher_encrypt(handle, out_buffer , MAX_FILE_SIZE , in_buffer , encrypted_bytes);
+	if(!err==GPG_ERR_NO_ERROR){
+		fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
+		exit(-1);
 	}
 
+	gcry_md_write(h , out_buffer, encrypted_bytes);
 	gcry_md_final(h);
 	hmac = gcry_md_read(h , GCRY_MD_SHA512 );
+
+	memcpy(&out_buffer[encrypted_bytes],hmac,sizeof(char)*HMAC_SIZE);
 	
-	printf("hmac: ");
-	print_buffer(hmac,64);
+	if(args->isLocal==true){
+		printf("Print successful");	
+		write_buffer_to_file(out_file,out_buffer, encrypted_bytes+HMAC_SIZE);
+	}
+	else{
+		transmit(args,out_buffer,encrypted_bytes+HMAC_SIZE);
+	}
 
 	fclose(inp_file);
 	fclose(out_file);
@@ -99,24 +89,21 @@ int main(int argc, char *argv[]){
 
 void print_buffer(char *p, int len)
 {
-    //printf("Printing Buffer\n");
     	int i;
-//	printf("\n--------------------------------------------------------\n");
     	for (i = 0; i < len; ++i)
         	printf("%c", p[i]);
- //   	printf("\n");
-//	printf("\n--------------------------------------------------------\n");
+}
+void print_buffer_d(char *p, int len)
+{
+    	int i;
+    	for (i = 0; i < len; ++i)
+        	printf(" %c %d %d ", p[i],p[i],i);
+    	printf("i=%d\n",i);
 }
 
 void write_buffer_to_file(FILE *f,char *p, size_t len)
 {
 	write(fileno(f),p,len);
-//	printf("wrote %d bytes to file",len);	
-    	//int i;
-    	//for (i = 0; i < len; ++i){
-       // 	fprintf(f,"%c", p[i]);	
-       // 	printf("%c", p[i]);
-//	}
 }
 
 void print_key(char *key){
@@ -135,6 +122,13 @@ void generate_key(char *password,char *key){
 	gcry_kdf_derive( password, strlen(password)*sizeof(char), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
 					strlen("NaCl")*sizeof(char), 4096 , MAX_KEY_LEN, key );
 }
+
+void DieWithError(char *errorMessage)
+{
+        perror(errorMessage);
+        exit(1);
+}
+
 
 arguments *parse_args(int argc,char *argv[]){
 
@@ -181,4 +175,28 @@ void check_args(int argc,char *argv[]){
 		printf("Wrong parameters\n");
 		exit(-1);
 	}
+}
+
+
+void transmit(arguments *args,char *buffer,size_t length){
+	
+	int sock;
+	struct sockaddr_in echoServAddr;	
+	
+	if((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+		DieWithError("socket() failed");
+
+	echoServAddr.sin_family = AF_INET;/* Internet address family */
+	echoServAddr.sin_addr.s_addr=htonl(INADDR_ANY); /* Server IP address */
+	echoServAddr.sin_port =htons(args->port); /* Server port */
+	
+	if (connect(sock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
+		DieWithError("connect() failed");
+
+	/* Send the string to the server */	
+	if (send(sock,buffer,length, 0) !=length)
+		DieWithError("send() sent a different number of bytes than expected");
+	
+	close(sock);
+
 }
