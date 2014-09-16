@@ -17,8 +17,8 @@ void listen_and_decrypt(arguments *args){
 		DieWithError("socket() failed");
 
 	echoServAddr.sin_family = AF_INET;/* Internet address family */
-	echoServAddr.sin_addr.s_addr =htonl(INADDR_ANY);/* Any incoming interface */
-	echoServAddr.sin_port =htons(echoServPort); /* Local port */
+	echoServAddr.sin_addr.s_addr =htonl(inet_network("127.0.0.1"));/* Any incoming interface */
+	echoServAddr.sin_port =htons(args->port); /* Local port */
 
 	if (bind(servSock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
 	{
@@ -123,25 +123,31 @@ void decrypt_file(FILE *inp_file){
 
 	generate_key(password,key);
 
+	printf("1\n");
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
 	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
         gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
+	printf("2\n");
 
 	fseek (inp_file, 0L, SEEK_END);
 	file_size=ftell(inp_file);
 	fseek(inp_file, 0L, SEEK_SET);
+	printf("3\n");
 
 	fseek (inp_file, -64L, SEEK_END);
 	fread(hmac,sizeof(char),hmac_size,inp_file);	
 	fseek(inp_file, 0L, SEEK_SET);
+	printf("4\n");
 	
      
 	size_t read_bytes = fread(file_buffer,sizeof(char),file_size-hmac_size,inp_file);
+	printf("5\n");
 
 	gcry_md_write(h , file_buffer, file_size-hmac_size);
         gcry_md_final(h);
         calculated_hmac = gcry_md_read(h , GCRY_MD_SHA512 );
+	printf("6\n");
 	
 	if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
 		printf("HMAC ERROR CODE 66");

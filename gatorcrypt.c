@@ -30,7 +30,7 @@ int main(int argc, char *argv[]){
 		printf("isLocal true\n");
 	}
 	else{
-		printf("IP %d\n",args->ip_addr);	
+		printf("IP %s\n",args->ip_addr);	
 		printf("PORT %d\n",args->port);
 	}
 	#endif
@@ -157,7 +157,7 @@ arguments *parse_args(int argc,char *argv[]){
 	strcpy(args->fileName,argv[1]);
 
 	if(strcmp(argv[2],"-d")==0){
-		args->ip_addr = atoi(strtok(argv[3],":"));
+		strcpy(args->ip_addr,strtok(argv[3],":"));
 		args->port = atoi(strtok(NULL,":"));
 		args->isLocal = false;  
 	}
@@ -195,8 +195,8 @@ void transmit(arguments *args,char *buffer,size_t length){
 		DieWithError("socket() failed");
 
 	echoServAddr.sin_family = AF_INET;/* Internet address family */
-	echoServAddr.sin_addr.s_addr=htonl(INADDR_ANY); /* Server IP address */
-	echoServAddr.sin_port =htons(echoServPort); /* Server port */
+	echoServAddr.sin_addr.s_addr=htonl(inet_network(args->ip_addr)); /* Server IP address */
+	echoServAddr.sin_port =htons(args->port); /* Server port */
 	
 	if (connect(sock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
 		DieWithError("connect() failed");

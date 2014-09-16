@@ -4,7 +4,7 @@ typedef enum boolean {
 }bool;
 
 typedef struct arguments {
-	int ip_addr;
+	char ip_addr[16];
 	int port;
 	bool isLocal;
 	char fileName[20];
