@@ -5,6 +5,7 @@
 #define MAX_PASS_LEN 10
 #define MAX_KEY_LEN 64
 #define MAX_FILE_SIZE 10000
+#define BLOCK_LENGTH 16
 int main(int argc, char *argv[]){
 	
 	arguments* args = parse_args(argc,argv);
@@ -19,6 +20,9 @@ int main(int argc, char *argv[]){
 	size_t file_size;
 	size_t buffer_size = BUFFER_SIZE;
 	gcry_error_t err = 0;
+	size_t blk_length =BLOCK_LENGTH;
+	char iv[BLOCK_LENGTH] = "5844";
+
 
 	#ifdef DEBUG
 	printf("filename %s\n",args->fileName);
@@ -61,7 +65,7 @@ int main(int argc, char *argv[]){
 	char out_buffer[MAX_FILE_SIZE+HMAC_SIZE];
 	size_t encrypted_bytes = fread(in_buffer,sizeof(char),MAX_FILE_SIZE,inp_file);
 
-	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+	gcry_cipher_setiv(handle , &iv[0] ,blk_length);
 	err = gcry_cipher_encrypt(handle, out_buffer , MAX_FILE_SIZE , in_buffer , encrypted_bytes);
 	if(!err==GPG_ERR_NO_ERROR){
 		fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));

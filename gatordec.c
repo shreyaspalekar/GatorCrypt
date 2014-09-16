@@ -6,7 +6,7 @@
 #define MAX_KEY_LEN 64
 #define HMAC_SIZE 64
 #define MAX_FILE_SIZE 10000
-
+#define BLOCK_LENGTH 16
 void listen_and_decrypt(arguments *args){
 	int servSock;
 	int echoServPort = 88;//args->port;
@@ -46,7 +46,8 @@ void listen_and_decrypt(arguments *args){
 		gcry_cipher_hd_t handle;
 		gcry_md_hd_t h;
 		gcry_error_t err = 0;
-	
+		size_t blk_length = BLOCK_LENGTH;
+		char iv[BLOCK_LENGTH] = "5844";
 
 		if ((clntSock=accept(servSock,(struct sockaddr*)&echoClntAddr,&clntLen)) < 0)
 			DieWithError("accept() failed");
@@ -77,7 +78,7 @@ void listen_and_decrypt(arguments *args){
 			exit(66);
 		}	
 
-		gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+		gcry_cipher_setiv(handle , &iv[0] ,blk_length);
 		err = gcry_cipher_decrypt (handle , output_buffer , MAX_FILE_SIZE , file_buffer , recvMsgSize-hmac_size );
 
 		if(!err==GPG_ERR_NO_ERROR){
@@ -113,6 +114,8 @@ void decrypt_file(FILE *inp_file){
 	gcry_cipher_hd_t handle;
 	gcry_md_hd_t h;
 	gcry_error_t err = 0;
+	size_t blk_length = BLOCK_LENGTH;
+	char iv[BLOCK_LENGTH] = "5844";
 
 	printf("Enter password: ");
 	scanf("%s",password);
@@ -146,7 +149,7 @@ void decrypt_file(FILE *inp_file){
 	}
 
 
-	gcry_cipher_setiv(handle , "5844" ,strlen("5844")*sizeof(char));
+	gcry_cipher_setiv(handle , &iv[0] ,blk_length);
 	err = gcry_cipher_decrypt (handle , output_buffer , MAX_FILE_SIZE , file_buffer , file_size-hmac_size );
 
 	if(!err==GPG_ERR_NO_ERROR){
