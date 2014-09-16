@@ -3,7 +3,6 @@
 #define BUFFER_SIZE 128
 #define HMAC_SIZE 64
 #define MAX_PASS_LEN 10
-#define MAX_KEY_LEN 64
 #define MAX_FILE_SIZE 10000
 #define BLOCK_LENGTH 16
 int main(int argc, char *argv[]){
@@ -96,48 +95,6 @@ int main(int argc, char *argv[]){
 	exit(0);
 }
 
-void print_buffer(char *p, int len)
-{
-    	int i;
-    	for (i = 0; i < len; ++i)
-        	printf("%c", p[i]);
-}
-void print_buffer_d(char *p, int len)
-{
-    	int i;
-    	for (i = 0; i < len; ++i)
-        	printf(" %c %d %d ", p[i],p[i],i);
-    	printf("i=%d\n",i);
-}
-
-void write_buffer_to_file(FILE *f,char *p, size_t len)
-{
-	write(fileno(f),p,len);
-}
-
-void print_key(char *key){
-	unsigned char * ptr = key;
-	int i =0;
-	printf("Key: ");
-	while(i<strlen(key)){
-		printf("%X ",*ptr);
-		ptr++;
-		i++;
-	}
-	printf("\n");
-}
-void generate_key(char *password,char *key){
-
-	gcry_kdf_derive( password, strlen(password)*sizeof(char), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
-					strlen("NaCl")*sizeof(char), 4096 , MAX_KEY_LEN, key );
-}
-
-void DieWithError(char *errorMessage)
-{
-        perror(errorMessage);
-        exit(1);
-}
-
 
 arguments *parse_args(int argc,char *argv[]){
 
@@ -190,20 +147,18 @@ void check_args(int argc,char *argv[]){
 void transmit(arguments *args,char *buffer,size_t length){
 	
 	int sock;
-	int echoServPort=88;
-	struct sockaddr_in echoServAddr;	
+	struct sockaddr_in servAddr;	
 	
 	if((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 		DieWithError("socket() failed");
 
-	echoServAddr.sin_family = AF_INET;/* Internet address family */
-	echoServAddr.sin_addr.s_addr=htonl(inet_network(args->ip_addr)); /* Server IP address */
-	echoServAddr.sin_port =htons(args->port); /* Server port */
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_addr.s_addr=htonl(inet_network(args->ip_addr));
+	servAddr.sin_port =htons(args->port);
 	
-	if (connect(sock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
+	if (connect(sock, (struct sockaddr*) &servAddr,sizeof(servAddr)) < 0)
 		DieWithError("connect() failed");
 
-	/* Send the string to the server */	
 	if (send(sock,buffer,length, 0) !=length)
 		DieWithError("send() sent a different number of bytes than expected");
 	

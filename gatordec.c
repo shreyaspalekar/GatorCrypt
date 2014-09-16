@@ -9,19 +9,18 @@
 #define BLOCK_LENGTH 16
 void listen_and_decrypt(arguments *args){
 	int servSock;
-	int echoServPort = 88;//args->port;
-	struct sockaddr_in echoServAddr;
-	struct sockaddr_in echoClntAddr;
+	struct sockaddr_in servAddr;
+	struct sockaddr_in clntAddr;
 	FILE *outFile;
 
 	if ((servSock= socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 		DieWithError("socket() failed");
 
-	echoServAddr.sin_family = AF_INET;/* Internet address family */
-	echoServAddr.sin_addr.s_addr =htonl(inet_network("127.0.0.1"));/* Any incoming interface */
-	echoServAddr.sin_port =htons(args->port); /* Local port */
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_addr.s_addr =htonl(inet_network("127.0.0.1"));
+	servAddr.sin_port =htons(args->port); 
 
-	if (bind(servSock, (struct sockaddr*) &echoServAddr,sizeof(echoServAddr)) < 0)
+	if (bind(servSock, (struct sockaddr*) &servAddr,sizeof(servAddr)) < 0)
 	{
 		DieWithError("bind() failed");
 		exit(0);
@@ -33,7 +32,7 @@ void listen_and_decrypt(arguments *args){
 //	for (;;) /* Run forever */
 //	{
 		
-		int clntLen=sizeof(echoClntAddr);
+		int clntLen=sizeof(clntAddr);
 		int clntSock;
 		int recvMsgSize;
 		char password[MAX_PASS_LEN];
@@ -50,7 +49,7 @@ void listen_and_decrypt(arguments *args){
 		size_t blk_length = BLOCK_LENGTH;
 		char iv[BLOCK_LENGTH] = "5844";
 
-		if ((clntSock=accept(servSock,(struct sockaddr*)&echoClntAddr,&clntLen)) < 0)
+		if ((clntSock=accept(servSock,(struct sockaddr*)&clntAddr,&clntLen)) < 0)
 			DieWithError("accept() failed");
 
 		/* Receive message from client */
@@ -104,11 +103,6 @@ void listen_and_decrypt(arguments *args){
 
 }
 
-void DieWithError(char *errorMessage)
-{
-	perror(errorMessage);
-	exit(1);
-}
 
 void decrypt_file(FILE *inp_file,arguments* args){
 	char password[MAX_PASS_LEN];
@@ -177,46 +171,6 @@ void decrypt_file(FILE *inp_file,arguments* args){
 	fclose(inp_file);
 
 }
-void print_buffer(char *p, int len)
-{
-    	int i;
-    	for (i = 0; i < len; ++i)
-        	printf("%c", p[i]);
-}
-
-void print_buffer_d(char *p, int len)
-{
-   
-        int i;
-        for (i = 0; i < len; ++i)
-                printf(" %c %d %d", p[i],p[i],i);
-        printf("i=%d\n",i);
-	
-}
-
-
-void write_buffer_to_file(FILE *f,char *p, size_t len)
-{
-    int i;
-    for (i = 0; i < len; ++i)
-        fprintf(f,"%c", p[i]);
-}
-
-void print_key(char *key){
-	unsigned char * ptr = key;
-	int i =0;
-	printf("Key: ");
-	while(i<strlen(key)){
-		printf("%X ",*ptr);
-		ptr++;
-		i++;
-	}
-}
-void generate_key(char *password,char *key){
-
-	gcry_kdf_derive( password, strlen(password)*sizeof(char), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
-					strlen("NaCl")*sizeof(char), 4096 , MAX_KEY_LEN, key );
-}
 
 arguments *parse_args(int argc,char *argv[]){
 
@@ -283,14 +237,18 @@ int main(int argc, char *argv[]){
 
 	
 	if(args->isLocal==true){
-		inp_file = fopen(args->fileName,"r");
-		decrypt_file(inp_file,args);	
-	}
-	else{
 		if( access( args->outFile, R_OK ) != -1 ) {
 			printf("Output File exists!!!\n");
 			exit(33);
 		} 
+		inp_file = fopen(args->fileName,"r");
+		decrypt_file(inp_file,args);	
+	}
+	else{
+//		if( access( args->outFile, R_OK ) != -1 ) {
+//			printf("Output File exists!!!\n");
+//			exit(33);
+//		} 
 		listen_and_decrypt(args);
 	}
 	exit(0);
