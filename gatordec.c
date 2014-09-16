@@ -1,4 +1,8 @@
 #include<gatorcrypt.h>
+#include <linux/sockios.h>
+#include <linux/if.h>
+#include <arpa/inet.h>
+
 //#define DEBUG
 #define MAXPENDING 10
 #define BUFFER_SIZE 128
@@ -13,13 +17,18 @@ void listen_and_decrypt(arguments *args){
 	int servSock;
 	struct sockaddr_in servAddr;
 	struct sockaddr_in clntAddr;
+ 	struct ifreq ifr;
 	FILE *outFile;
+	
 	/*set up the application to listen on the port*/
 	if ((servSock= socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 		DieWithErrorCode("socket() failed",-1);
 
 	servAddr.sin_family = AF_INET;
-	servAddr.sin_addr.s_addr =htonl(inet_network("127.0.0.1"));
+	
+	strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+ 	ioctl(servSock, SIOCGIFADDR, &ifr);
+	servAddr.sin_addr.s_addr =htonl(inet_network(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr)));
 	servAddr.sin_port =htons(args->port); 
 
 	if (bind(servSock, (struct sockaddr*) &servAddr,sizeof(servAddr)) < 0)
@@ -33,6 +42,7 @@ void listen_and_decrypt(arguments *args){
 //	for (;;) /* Run forever */
 //	{
 		/*set up variables*/		
+		printf("ServerIp:%s\nListening on port: %d\n",inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr),args->port);
 		int clntLen=sizeof(clntAddr);
 		int clntSock;
 		int recvMsgSize;
