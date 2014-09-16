@@ -62,6 +62,8 @@ void listen_and_decrypt(arguments *args){
 		printf("Password: %s\n",password);
 
 		generate_key(password,key);
+		print_key(key);
+		printf("\n");
 
 		gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 		gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
@@ -75,8 +77,8 @@ void listen_and_decrypt(arguments *args){
 	        calculated_hmac = gcry_md_read(h , GCRY_MD_SHA512 );	
 		
 		if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
-			printf("HMAC ERROR CODE 66");
-			exit(66);
+			printf("HMAC MISMATCH\n");
+			exit(62);
 		}	
 
 		gcry_cipher_setiv(handle , &iv[0] ,blk_length);
@@ -86,6 +88,8 @@ void listen_and_decrypt(arguments *args){
 			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
 			exit(-1);
 		}
+
+
 		outFile = fopen(args->outFile,"w");
 		//print_buffer(output_buffer,recvMsgSize-hmac_size);
 		write_buffer_to_file(outFile,output_buffer, recvMsgSize-hmac_size);
@@ -126,6 +130,8 @@ void decrypt_file(FILE *inp_file){
 	printf("Password: %s\n",password);
 
 	generate_key(password,key);
+	print_key(key);
+	printf("\n");
 
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
@@ -147,8 +153,8 @@ void decrypt_file(FILE *inp_file){
         calculated_hmac = gcry_md_read(h , GCRY_MD_SHA512 );
 	
 	if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
-		printf("HMAC ERROR CODE 66");
-		exit(66);
+		printf("HMAC MISMATCH\n");
+		exit(62);
 	}
 
 
@@ -277,6 +283,10 @@ int main(int argc, char *argv[]){
 		decrypt_file(inp_file);	
 	}
 	else{
+		if( access( args->outFile, R_OK ) != -1 ) {
+			printf("Output File exists!!!\n");
+			exit(33);
+		} 
 		listen_and_decrypt(args);
 	}
 	exit(0);

@@ -1,5 +1,5 @@
 #include<gatorcrypt.h>
-#define DEBUG
+//#define DEBUG
 #define BUFFER_SIZE 128
 #define HMAC_SIZE 64
 #define MAX_PASS_LEN 10
@@ -39,18 +39,13 @@ int main(int argc, char *argv[]){
 	scanf("%s",password);
 
 	generate_key(password,key);
-
-	printf("Password: %s\n",password);
 	
-	#ifdef DEBUG
 	print_key(key);
-	#endif
-	//TODO:Close files
+	
 	inp_file = fopen(args->fileName,"r");
 	strcpy(out_file_name, args->fileName);
 	strcat(out_file_name, ".uf");
-	out_file = fopen(out_file_name,"w");
-
+	
 	fseek (inp_file, 0, SEEK_END);
 	file_size=ftell(inp_file);
 	fseek(inp_file, 0L, SEEK_SET);
@@ -79,7 +74,14 @@ int main(int argc, char *argv[]){
 	memcpy(&out_buffer[encrypted_bytes],hmac,sizeof(char)*HMAC_SIZE);
 	
 	if(args->isLocal==true){
-		printf("Print successful");	
+		if( access( out_file_name, R_OK ) != -1 ) {
+                        printf("Output File exists!!!\n");
+                        exit(33);
+                }
+ 
+		out_file  = fopen(out_file_name,"w");
+		printf("\nencrypted data of length %d bytes along with HMAC of size %d bytes written to file %s.uf\n"
+			,encrypted_bytes,HMAC_SIZE,args->fileName);
 		write_buffer_to_file(out_file,out_buffer, encrypted_bytes+HMAC_SIZE);
 	}
 	else{
