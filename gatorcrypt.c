@@ -5,8 +5,9 @@
 #define MAX_PASS_LEN 10
 #define MAX_FILE_SIZE 10000
 #define BLOCK_LENGTH 16
+
 int main(int argc, char *argv[]){
-	
+	/*Set up variables*/	
 	arguments* args = parse_args(argc,argv);
 	char password[MAX_PASS_LEN];
 	char key[MAX_KEY_LEN];
@@ -21,6 +22,8 @@ int main(int argc, char *argv[]){
 	gcry_error_t err = 0;
 	size_t blk_length =BLOCK_LENGTH;
 	char iv[BLOCK_LENGTH] = "5844";
+	char in_buffer[MAX_FILE_SIZE];
+	char out_buffer[MAX_FILE_SIZE+HMAC_SIZE];
 
 
 	#ifdef DEBUG
@@ -33,54 +36,62 @@ int main(int argc, char *argv[]){
 		printf("PORT %d\n",args->port);
 	}
 	#endif
-
+	/*get password and generate the key and print it*/
 	printf("Enter password: ");
 	scanf("%s",password);
-
 	generate_key(password,key);
-	
 	print_key(key);
-	
+
+	/*Open input file for reading*/	
 	inp_file = fopen(args->fileName,"r");
 	strcpy(out_file_name, args->fileName);
 	strcat(out_file_name, ".uf");
 	
+	/*Get filesize in bytes*/
 	fseek (inp_file, 0, SEEK_END);
 	file_size=ftell(inp_file);
 	fseek(inp_file, 0L, SEEK_SET);
 
+	/*open encryption and hashing handles and set the keys*/
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
 
 	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
 	gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
-	
-	char in_buffer[MAX_FILE_SIZE];
-	char out_buffer[MAX_FILE_SIZE+HMAC_SIZE];
+
+	/*read in the file into a buffer*/	
 	size_t encrypted_bytes = fread(in_buffer,sizeof(char),MAX_FILE_SIZE,inp_file);
 
+	/*set the initializtion vector and encrypt the file buffer and display an error if any*/
 	gcry_cipher_setiv(handle , &iv[0] ,blk_length);
 	err = gcry_cipher_encrypt(handle, out_buffer , MAX_FILE_SIZE , in_buffer , encrypted_bytes);
+
 	if(!err==GPG_ERR_NO_ERROR){
 		fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
 		exit(-1);
 	}
 
+	/*generate the hash of the buffer data*/
 	gcry_md_write(h , out_buffer, encrypted_bytes);
 	gcry_md_final(h);
 	hmac = gcry_md_read(h , GCRY_MD_SHA512 );
 
+	/*append the hash to the buffer*/
 	memcpy(&out_buffer[encrypted_bytes],hmac,sizeof(char)*HMAC_SIZE);
 	
+	/*check if local decryption is enabled else transmit it to the server*/
 	if(args->isLocal==true){
+
 		if( access( out_file_name, R_OK ) != -1 ) {
                         printf("Output File exists!!!\n");
                         exit(33);
                 }
  
 		out_file  = fopen(out_file_name,"w");
+
 		printf("\nencrypted data of length %d bytes along with HMAC of size %d bytes written to file %s.uf\n"
 			,encrypted_bytes,HMAC_SIZE,args->fileName);
+
 		write_buffer_to_file(out_file,out_buffer, encrypted_bytes+HMAC_SIZE);
 		fclose(out_file);
 	}
@@ -88,6 +99,7 @@ int main(int argc, char *argv[]){
 		transmit(args,out_buffer,encrypted_bytes+HMAC_SIZE);
 	}
 
+	/*close the file and encryption handles*/
 	fclose(inp_file);
 	gcry_cipher_close(handle);
 	gcry_md_close(h);
@@ -95,7 +107,7 @@ int main(int argc, char *argv[]){
 	exit(0);
 }
 
-
+/*Parse the arguments with some sanity checking*/
 arguments *parse_args(int argc,char *argv[]){
 
 	#ifdef DEBUG
@@ -109,28 +121,32 @@ arguments *parse_args(int argc,char *argv[]){
 		puts( argv[ctr] );
 	}
 	#endif
-	
+	/*check the arguments*/	
 	check_args(argc,argv);
+	
 	arguments *args =  (arguments *) malloc(sizeof(arguments));
-
+	/*Copy filename to structure*/
 	strcpy(args->fileName,argv[1]);
 
+	/*Copy ip and port of server to structure*/
 	if(strcmp(argv[2],"-d")==0){
 		strcpy(args->ip_addr,strtok(argv[3],":"));
 		args->port = atoi(strtok(NULL,":"));
 		args->isLocal = false;  
 	}
 	else{
+		/*set the local decrypt falg*/
 		args->isLocal = true;
 	}
 
 	return args;
 }
 
+/*Check the correctness of the arguments*/
 void check_args(int argc,char *argv[]){
 
 	if(argc<3){
-		printf("Need atleast one argument\n");
+		printf("Wrong argument count\n");
 		exit(-1);
 	}
 	else if(strcmp(argv[2],"-d")==0&&argc<4){
@@ -143,6 +159,7 @@ void check_args(int argc,char *argv[]){
 	}
 }
 
+/*Transmit buffer of given length to the server of ip and port specified in the argument structure*/
 
 void transmit(arguments *args,char *buffer,size_t length){
 	
