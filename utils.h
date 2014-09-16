@@ -51,12 +51,12 @@ void generate_key(char *password,char *key){
 	gcry_kdf_derive( password, strlen(password)*sizeof(char), GCRY_KDF_PBKDF2 , GCRY_MD_SHA512 , "NaCl", 
 					strlen("NaCl")*sizeof(char), 4096 , MAX_KEY_LEN, key );
 }
+
 /*Exit the program displaying the error*/
-void DieWithError(char *errorMessage)
+void DieWithErrorCode(char *errorMessage,int code)
 {
         perror(errorMessage);
-        exit(1);
+        exit(code);
 }
-
 
 

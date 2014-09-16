@@ -1,5 +1,5 @@
 #include<gatorcrypt.h>
-#define DEBUG
+//#define DEBUG
 #define BUFFER_SIZE 128
 #define HMAC_SIZE 64
 #define MAX_PASS_LEN 10
@@ -83,8 +83,7 @@ int main(int argc, char *argv[]){
 	if(args->isLocal==true){
 
 		if( access( out_file_name, R_OK ) != -1 ) {
-                        printf("Output File exists!!!\n");
-                        exit(33);
+                        DieWithErrorCode("Output File exists!!!\n",33);
                 }
  
 		out_file  = fopen(out_file_name,"w");
@@ -146,16 +145,13 @@ arguments *parse_args(int argc,char *argv[]){
 void check_args(int argc,char *argv[]){
 
 	if(argc<3){
-		printf("Wrong argument count\n");
-		exit(-1);
+		DieWithErrorCode("Wrong argument count\n",-1);
 	}
 	else if(strcmp(argv[2],"-d")==0&&argc<4){
-		printf("Specify destination ip and port\n");
-		exit(-1);
+		DieWithErrorCode("Specify destination ip and port\n",-1);
 	}	
 	else if(strcmp(argv[2],"-l")!=0&&strcmp(argv[2],"-d")!=0){
-		printf("Wrong parameters\n");
-		exit(-1);
+		DieWithErrorCode("Wrong parameters\n",-1);
 	}
 }
 
@@ -167,17 +163,17 @@ void transmit(arguments *args,char *buffer,size_t length){
 	struct sockaddr_in servAddr;	
 	
 	if((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-		DieWithError("socket() failed");
+		DieWithErrorCode("socket() failed",-1);
 
 	servAddr.sin_family = AF_INET;
 	servAddr.sin_addr.s_addr=htonl(inet_network(args->ip_addr));
 	servAddr.sin_port =htons(args->port);
 	
 	if (connect(sock, (struct sockaddr*) &servAddr,sizeof(servAddr)) < 0)
-		DieWithError("connect() failed");
+		DieWithErrorCode("connect() failed",-1);
 
 	if (send(sock,buffer,length, 0) !=length)
-		DieWithError("send() sent a different number of bytes than expected");
+		DieWithErrorCode("send() sent a different number of bytes than expected",-1);
 	
 	close(sock);
 

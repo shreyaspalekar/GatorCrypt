@@ -16,7 +16,7 @@ void listen_and_decrypt(arguments *args){
 	FILE *outFile;
 	/*set up the application to listen on the port*/
 	if ((servSock= socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-		DieWithError("socket() failed");
+		DieWithErrorCode("socket() failed",-1);
 
 	servAddr.sin_family = AF_INET;
 	servAddr.sin_addr.s_addr =htonl(inet_network("127.0.0.1"));
@@ -24,12 +24,11 @@ void listen_and_decrypt(arguments *args){
 
 	if (bind(servSock, (struct sockaddr*) &servAddr,sizeof(servAddr)) < 0)
 	{
-		DieWithError("bind() failed");
-		exit(0);
+		DieWithErrorCode("bind() failed",-1);
 	}
 
 	if (listen(servSock, MAXPENDING) < 0)
-		DieWithError("listen() failed");
+		DieWithErrorCode("listen() failed",-1);
 
 //	for (;;) /* Run forever */
 //	{
@@ -53,11 +52,11 @@ void listen_and_decrypt(arguments *args){
 		
 		/*accept client communication*/
 		if ((clntSock=accept(servSock,(struct sockaddr*)&clntAddr,&clntLen)) < 0)
-			DieWithError("accept() failed");
+			DieWithErrorCode("accept() failed",-1);
 
 		/* Receive message from client */
 		if ((recvMsgSize=recv(clntSock,file_buffer,MAX_FILE_SIZE, 0)) < 0)
-			DieWithError("recv() failed");
+			DieWithErrorCode("recv() failed",-1);
 		/*get password and generate key*/
 		printf("Enter password: ");
 		scanf("%s",password);
@@ -83,8 +82,7 @@ void listen_and_decrypt(arguments *args){
 		
 		/*compare the hmacs*/
 		if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
-			printf("HMAC MISMATCH\n");
-			exit(62);
+			DieWithErrorCode("HMAC MISMATCH\n",62);
 		}	
 
 		/*set initailization vectors and decrypt*/
@@ -167,8 +165,7 @@ void decrypt_file(FILE *inp_file,arguments* args){
 	
 	/*compare the calculated and the stored hmac*/
 	if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
-		printf("HMAC MISMATCH\n");
-		exit(62);
+		DieWithErrorCode("HMAC MISMATCH\n",62);
 	}
 
 	/*set the initialization vector and decrypt the data*/
@@ -181,7 +178,7 @@ void decrypt_file(FILE *inp_file,arguments* args){
 		exit(-1);
 	}
 	/*print the decrypted contents and write out the data*/
-	print_buffer(output_buffer,file_size-hmac_size);
+	//print_buffer(output_buffer,file_size-hmac_size);
 	write_buffer_to_file(outfile,output_buffer,file_size-hmac_size);
 
 	/*close the hashing and encryption handles*/
@@ -227,16 +224,13 @@ arguments *parse_args(int argc,char *argv[]){
 void check_args(int argc,char *argv[]){
 
 	if(argc<3){
-		printf("Need atleast one argument\n");
-		exit(-1);
+		DieWithErrorCode("Wrong argument count\n",-1);
 	}
 	else if(strcmp(argv[2],"-d")==0&&argc<4){
-		printf("Specify port\n");
-		exit(-1);
+		DieWithErrorCode("Specify port\n",-1);
 	}	
 	else if(strcmp(argv[2],"-l")!=0&&strcmp(argv[2],"-d")!=0){
-		printf("Wrong parameters\n");
-		exit(-1);
+		DieWithErrorCode("Wrong parameters\n",-1);
 	}
 }
 
@@ -258,8 +252,7 @@ int main(int argc, char *argv[]){
 
 	/*Check if the output file is present*/
 	if( access( args->outFile, R_OK ) != -1 ) {
-		printf("Output File exists!!!\n");
-		exit(33);
+		DieWithErrorCode("Output File exists!!!\n",33);
 	} 
 
 	/* check if the local flag is set else start to listen on the specified port*/
