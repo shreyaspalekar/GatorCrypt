@@ -12,6 +12,7 @@ void listen_and_decrypt(arguments *args){
 	int echoServPort = 88;//args->port;
 	struct sockaddr_in echoServAddr;
 	struct sockaddr_in echoClntAddr;
+	FILE *outFile;
 
 	if ((servSock= socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 		DieWithError("socket() failed");
@@ -85,11 +86,14 @@ void listen_and_decrypt(arguments *args){
 			fprintf (stderr, "Failure: %s/%s\n",gcry_strsource (err),gcry_strerror (err));
 			exit(-1);
 		}
-		print_buffer(output_buffer,recvMsgSize-hmac_size);
+		outFile = fopen(args->outFile,"w");
+		//print_buffer(output_buffer,recvMsgSize-hmac_size);
+		write_buffer_to_file(outFile,output_buffer, recvMsgSize-hmac_size);
 	
 		gcry_cipher_close(handle);
 		gcry_md_close(h);
-        
+       
+		fclose(outFile); 
 		close(clntSock); 
 		
 //	}
@@ -123,31 +127,24 @@ void decrypt_file(FILE *inp_file){
 
 	generate_key(password,key);
 
-	printf("1\n");
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
 	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
 	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
         gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
-	printf("2\n");
 
 	fseek (inp_file, 0L, SEEK_END);
 	file_size=ftell(inp_file);
 	fseek(inp_file, 0L, SEEK_SET);
-	printf("3\n");
 
 	fseek (inp_file, -64L, SEEK_END);
 	fread(hmac,sizeof(char),hmac_size,inp_file);	
 	fseek(inp_file, 0L, SEEK_SET);
-	printf("4\n");
-	
      
 	size_t read_bytes = fread(file_buffer,sizeof(char),file_size-hmac_size,inp_file);
-	printf("5\n");
 
 	gcry_md_write(h , file_buffer, file_size-hmac_size);
         gcry_md_final(h);
         calculated_hmac = gcry_md_read(h , GCRY_MD_SHA512 );
-	printf("6\n");
 	
 	if(!(memcmp(calculated_hmac,hmac,hmac_size)==0)){
 		printf("HMAC ERROR CODE 66");
@@ -229,6 +226,7 @@ arguments *parse_args(int argc,char *argv[]){
 	arguments *args =  (arguments *) malloc(sizeof(arguments));
 
 	strcpy(args->fileName,argv[1]);
+	strcpy(args->outFile,argv[1]);
         strcat(args->fileName, ".uf");
 
 

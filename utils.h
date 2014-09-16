@@ -8,5 +8,6 @@ typedef struct arguments {
 	int port;
 	bool isLocal;
 	char fileName[20];
+	char outFile[20];
 }arguments;
 
