@@ -7,30 +7,6 @@
 #define HMAC_SIZE 64
 #define MAX_FILE_SIZE 10000
 
-int main(int argc, char *argv[]){
-	
-	arguments* args = parse_args(argc,argv);
-	FILE * inp_file;
-	#ifdef DEBUG
-	printf("filename %s\n",args->fileName);
-	if(args->isLocal==true){	
-		printf("isLocal true\n");
-	}
-	else{
-		printf("PORT %d\n",args->port);
-	}
-	#endif
-
-	
-	if(args->isLocal==true){
-		inp_file = fopen(args->fileName,"r");
-		decrypt_file(inp_file);	
-	}
-	else{
-		listen_and_decrypt(args);
-	}
-	exit(0);
-}
 void listen_and_decrypt(arguments *args){
 	int servSock;
 	int echoServPort = 88;//args->port;
@@ -244,6 +220,8 @@ arguments *parse_args(int argc,char *argv[]){
 	arguments *args =  (arguments *) malloc(sizeof(arguments));
 
 	strcpy(args->fileName,argv[1]);
+        strcat(args->fileName, ".uf");
+
 
 	if(strcmp(argv[2],"-d")==0){
 		args->port = atoi(argv[3]);
@@ -270,4 +248,29 @@ void check_args(int argc,char *argv[]){
 		printf("Wrong parameters\n");
 		exit(-1);
 	}
+}
+
+int main(int argc, char *argv[]){
+	
+	arguments* args = parse_args(argc,argv);
+	FILE * inp_file;
+	#ifdef DEBUG
+	printf("filename %s\n",args->fileName);
+	if(args->isLocal==true){	
+		printf("isLocal true\n");
+	}
+	else{
+		printf("PORT %d\n",args->port);
+	}
+	#endif
+
+	
+	if(args->isLocal==true){
+		inp_file = fopen(args->fileName,"r");
+		decrypt_file(inp_file);	
+	}
+	else{
+		listen_and_decrypt(args);
+	}
+	exit(0);
 }

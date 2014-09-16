@@ -15,6 +15,7 @@ int main(int argc, char *argv[]){
 	gcry_md_hd_t h;
 	FILE * inp_file;
 	FILE * out_file;
+	char out_file_name[20];
 	size_t file_size;
 	size_t buffer_size = BUFFER_SIZE;
 	gcry_error_t err = 0;
@@ -42,7 +43,9 @@ int main(int argc, char *argv[]){
 	#endif
 	//TODO:Close files
 	inp_file = fopen(args->fileName,"r");
-	out_file = fopen("out","w");
+	strcpy(out_file_name, args->fileName);
+	strcat(out_file_name, ".uf");
+	out_file = fopen(out_file_name,"w");
 
 	fseek (inp_file, 0, SEEK_END);
 	file_size=ftell(inp_file);

@@ -8,8 +8,8 @@
 #include <sys/socket.h>
 #include<sys/types.h>
 
-void decrypt_file(FILE *);
 void listen_and_decrypt(arguments *);
+void decrypt_file(FILE *);
 void DieWithError(char *errorMessage);
 void write_buffer_to_file(FILE*,char*,size_t);
 void print_buffer(char *p, int len);
