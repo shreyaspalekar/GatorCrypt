@@ -1,5 +1,5 @@
 #include<gatorcrypt.h>
-//#define DEBUG
+#define DEBUG
 #define BUFFER_SIZE 128
 #define HMAC_SIZE 64
 #define MAX_PASS_LEN 10
@@ -83,13 +83,13 @@ int main(int argc, char *argv[]){
 		printf("\nencrypted data of length %d bytes along with HMAC of size %d bytes written to file %s.uf\n"
 			,encrypted_bytes,HMAC_SIZE,args->fileName);
 		write_buffer_to_file(out_file,out_buffer, encrypted_bytes+HMAC_SIZE);
+		fclose(out_file);
 	}
 	else{
 		transmit(args,out_buffer,encrypted_bytes+HMAC_SIZE);
 	}
 
 	fclose(inp_file);
-	fclose(out_file);
 	gcry_cipher_close(handle);
 	gcry_md_close(h);
 

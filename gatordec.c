@@ -110,7 +110,7 @@ void DieWithError(char *errorMessage)
 	exit(1);
 }
 
-void decrypt_file(FILE *inp_file){
+void decrypt_file(FILE *inp_file,arguments* args){
 	char password[MAX_PASS_LEN];
 	char key[MAX_KEY_LEN];
 	char file_buffer[MAX_FILE_SIZE];
@@ -124,6 +124,9 @@ void decrypt_file(FILE *inp_file){
 	gcry_error_t err = 0;
 	size_t blk_length = BLOCK_LENGTH;
 	char iv[BLOCK_LENGTH] = "5844";
+	FILE * outfile;
+
+	outfile = fopen(args->outFile,"w");
 
 	printf("Enter password: ");
 	scanf("%s",password);
@@ -166,6 +169,7 @@ void decrypt_file(FILE *inp_file){
 		exit(-1);
 	}
 	print_buffer(output_buffer,file_size-hmac_size);
+	write_buffer_to_file(outfile,output_buffer,file_size-hmac_size);
 
 	gcry_cipher_close(handle);
 	gcry_md_close(h);
@@ -280,7 +284,7 @@ int main(int argc, char *argv[]){
 	
 	if(args->isLocal==true){
 		inp_file = fopen(args->fileName,"r");
-		decrypt_file(inp_file);	
+		decrypt_file(inp_file,args);	
 	}
 	else{
 		if( access( args->outFile, R_OK ) != -1 ) {

@@ -9,7 +9,7 @@
 #include<sys/types.h>
 
 void listen_and_decrypt(arguments *);
-void decrypt_file(FILE *);
+void decrypt_file(FILE *,arguments *);
 void DieWithError(char *errorMessage);
 void write_buffer_to_file(FILE*,char*,size_t);
 void print_buffer(char *p, int len);
