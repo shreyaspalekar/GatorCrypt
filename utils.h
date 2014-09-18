@@ -38,7 +38,7 @@ void print_key(char *key){
 	unsigned char * ptr = key;
 	int i =0;
 	printf("Key: ");
-	while(i<strlen(key)){
+	while(i<MAX_KEY_LEN){
 		printf("%X ",*ptr);
 		ptr++;
 		i++;

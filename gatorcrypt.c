@@ -5,6 +5,7 @@
 #define MAX_PASS_LEN 10
 #define MAX_FILE_SIZE 10000
 #define BLOCK_LENGTH 16
+#define KEY_LENGTH 64
 
 int main(int argc, char *argv[]){
 	/*Set up variables*/	
@@ -54,10 +55,10 @@ int main(int argc, char *argv[]){
 
 	/*open encryption and hashing handles and set the keys*/
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
-	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+	gcry_cipher_setkey(handle , key , KEY_LENGTH*sizeof(char));
 
 	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
-	gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
+	gcry_md_setkey(h , key ,  KEY_LENGTH*sizeof(char));
 
 	/*read in the file into a buffer*/	
 	size_t encrypted_bytes = fread(in_buffer,sizeof(char),MAX_FILE_SIZE,inp_file);
@@ -89,7 +90,7 @@ int main(int argc, char *argv[]){
 		out_file  = fopen(out_file_name,"w");
 
 		printf("\nencrypted data of length %d bytes along with HMAC of size %d bytes written to file %s.uf\n"
-			,encrypted_bytes,HMAC_SIZE,args->fileName);
+			,(const int)encrypted_bytes,HMAC_SIZE,args->fileName);
 
 		write_buffer_to_file(out_file,out_buffer, encrypted_bytes+HMAC_SIZE);
 		fclose(out_file);

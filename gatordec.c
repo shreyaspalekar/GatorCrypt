@@ -78,9 +78,9 @@ void listen_and_decrypt(arguments *args){
 
 		/*open encryption and hashing handles*/
 		gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
-		gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+		gcry_cipher_setkey(handle , key , MAX_KEY_LEN*sizeof(char));
 		gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
-	        gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
+	        gcry_md_setkey(h , key ,  MAX_KEY_LEN*sizeof(char));
 
 		/*read the hmac bytes from the data*/
 		memcpy(hmac,&file_buffer[recvMsgSize-hmac_size],sizeof(char)*HMAC_SIZE);
@@ -151,9 +151,9 @@ void decrypt_file(FILE *inp_file,arguments* args){
 	
 	/*open encryption and hashing handles*/
 	gcry_cipher_open(&handle , GCRY_CIPHER_AES128 , GCRY_CIPHER_MODE_CBC , GCRY_CIPHER_CBC_CTS );
-	gcry_cipher_setkey(handle , key , strlen(key)*sizeof(char));
+	gcry_cipher_setkey(handle , key , MAX_KEY_LEN*sizeof(char));
 	gcry_md_open(&h , GCRY_MD_SHA512 , GCRY_MD_FLAG_HMAC);
-        gcry_md_setkey(h , key ,  strlen(key)*sizeof(char));
+        gcry_md_setkey(h , key ,  MAX_KEY_LEN*sizeof(char));
 	
 	/*get file size*/
 	fseek (inp_file, 0L, SEEK_END);
