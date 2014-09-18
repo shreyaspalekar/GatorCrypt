@@ -3,7 +3,7 @@
 #define BUFFER_SIZE 128
 #define HMAC_SIZE 64
 #define MAX_PASS_LEN 10
-#define MAX_FILE_SIZE 10000
+#define MAX_FILE_SIZE 1000000
 #define BLOCK_LENGTH 16
 #define KEY_LENGTH 64
 
@@ -21,7 +21,7 @@ int main(int argc, char *argv[]){
 	size_t file_size;
 	size_t buffer_size = BUFFER_SIZE;
 	gcry_error_t err = 0;
-	size_t blk_length =BLOCK_LENGTH;
+	size_t blk_length =gcry_cipher_get_algo_blklen (GCRY_CIPHER_AES128);
 	char iv[BLOCK_LENGTH] = "5844";
 	char in_buffer[MAX_FILE_SIZE];
 	char out_buffer[MAX_FILE_SIZE+HMAC_SIZE];

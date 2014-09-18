@@ -9,7 +9,7 @@
 #define MAX_PASS_LEN 10
 #define MAX_KEY_LEN 64
 #define HMAC_SIZE 64
-#define MAX_FILE_SIZE 10000
+#define MAX_FILE_SIZE 1000000
 #define BLOCK_LENGTH 16
 
 /*listen to the given port and decrypt incoming data*/
@@ -57,7 +57,7 @@ void listen_and_decrypt(arguments *args){
 		gcry_cipher_hd_t handle;
 		gcry_md_hd_t h;
 		gcry_error_t err = 0;
-		size_t blk_length = BLOCK_LENGTH;
+		size_t blk_length = gcry_cipher_get_algo_blklen (GCRY_CIPHER_AES128);;
 		char iv[BLOCK_LENGTH] = "5844";
 		
 		/*accept client communication*/
@@ -135,7 +135,7 @@ void decrypt_file(FILE *inp_file,arguments* args){
 	gcry_cipher_hd_t handle;
 	gcry_md_hd_t h;
 	gcry_error_t err = 0;
-	size_t blk_length = BLOCK_LENGTH;
+	size_t blk_length = gcry_cipher_get_algo_blklen (GCRY_CIPHER_AES128);;
 	char iv[BLOCK_LENGTH] = "5844";
 	FILE * outfile;
 	/*open output file*/
